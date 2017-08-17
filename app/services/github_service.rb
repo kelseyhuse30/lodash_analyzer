@@ -1,52 +1,86 @@
 require 'pry'
 class GithubService
+	attr_accessor :org, :conn
 
-	@@root_url = 'https://api.github.com/'
-	@@root_url_graphql = 'https://api.github.com/graphql'
+	# will use this url to migrate from REST to graphQL
+	# @@root_url_graphql = 'https://api.github.com/graphql'
 
-	def pull_requests(owner, repo)
+	def initialize(org_name)
+		self.org = Organization.find_or_create_by(name: org_name)
+		self.conn = Faraday.new(:url => 'https://api.github.com', :headers => {'Accept' => 'application/vnd.github.v3+json'})
+	end
 
-		resp = Faraday.get "#{@@root_url}/repos/#{owner}/#{repo}/pulls" do |req|
-			req.headers['Accept'] = 'application/vnd.github.v3+json'
-	  end
+	def create_org
+		resp = conn.get URI.parse(URI.encode("orgs/#{org.name}"))
+		body = JSON.parse(resp.body)
 
-	  body = JSON.parse(resp.body)
-	  binding.pry
-	  if resp.success?
-	    pulls = body["response"]
-	    pulls.each {|pull|
-	    	PullRequest.find_or_create_by(pull_request_id: pull[:id])
-	    }
-	  else
-	    error = body["meta"]["errorDetail"]
-	  end
+		org.login = body["login"]
+		org.url = body["url"]
+		org.repos_url = body["repos_url"]
+		org.description = body["description"]
+		org.public_repos = body["public_repos"]
+		org.html_url = body["html_url"]
+		org.github_created_at = body["created_at"]
+		org.save
+	end
 
-	  pulls ? pulls : error
+	def create_repos
+		resp = conn.get URI.parse(URI.encode("orgs/#{org.name}/repos"))
+		body = JSON.parse(resp.body)
+
+		body.each { |repo|
+			new_repo = Repo.find_or_create_by(github_id: repo["id"])
+			new_repo.name = repo["name"]
+			new_repo.html_url = repo["html_url"]
+			new_repo.description = repo["description"]
+			new_repo.url = repo["url"]
+			new_repo.commits_url = repo["commits_url"].chomp('{/sha}')
+			new_repo.pulls_url = repo["pulls_url"].chomp('{/number}')
+			new_repo.open_issues_count = repo["open_issues_count"]
+			new_repo.github_created_at = repo["created_at"]
+			new_repo.organization = org
+			new_repo.save
+		}
 
 	end
 
-	def create_org(org)
+	def create_pull_requests
 
-		resp = Faraday.get "#{@@root_url}/orgs/#{org}" do |req|
-			req.headers['Accept'] = 'application/vnd.github.v3+json'
-		end
+		repos = org.repos
 
-		Organization.
+		repos.each { |repo|
+			resp = conn.get URI.parse(URI.encode(repo.pulls_url))
+			body = JSON.parse(resp.body)
 
+			next if body.empty?
+
+			body.each { |pull|
+				new_pull = PullRequest.find_or_create_by(github_id: pull["id"])
+				new_pull.url = pull["url"]
+				new_pull.html_url = pull["html_url"]
+				new_pull.number = pull["number"]
+				new_pull.state = pull["state"]
+				new_pull.title = pull["title"]
+				new_pull.github_created_at = pull["created_at"]
+				new_pull.repo = repo
+				new_pull.user_id = create_user(pull["user"]["login"])
+				new_pull.save
+				puts "saved"
+			}
+		}
 	end
 
-	private
+	def create_user(username)
+		user = User.find_or_create_by(login: username)
 
-	def org_params
-	end
+		resp = conn.get URI.parse(URI.encode("users/#{username}"))
+		body = JSON.parse(resp.body)
 
-	def repo_params
-	end
-
-	def user_params
-	end
-
-	def pull_request_params
+		user.github_id = body["id"]
+		user.url = body["url"]
+		user.html_url = body["html_url"]
+		user.save
+		user.id
 	end
 
 end

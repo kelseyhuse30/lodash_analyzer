@@ -18,7 +18,7 @@ ActiveRecord::Schema.define(version: 20170815203221) do
     t.string "repos_url"
     t.string "description"
     t.string "name"
-    t.string "public_repos"
+    t.integer "public_repos"
     t.string "html_url"
     t.datetime "github_created_at"
     t.datetime "created_at", null: false
@@ -26,27 +26,29 @@ ActiveRecord::Schema.define(version: 20170815203221) do
   end
 
   create_table "pull_requests", force: :cascade do |t|
-    t.string "github_id"
+    t.integer "github_id"
+    t.integer "repo_id"
+    t.integer "user_id"
     t.string "html_url"
     t.string "url"
-    t.string "number"
+    t.integer "number"
     t.string "state"
     t.string "title"
-    t.string "user_id"
     t.datetime "github_created_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
   create_table "repos", force: :cascade do |t|
-    t.string "github_id"
+    t.integer "github_id"
+    t.integer "organization_id"
     t.string "name"
     t.string "html_url"
     t.string "description"
     t.string "url"
     t.string "commits_url"
     t.string "pulls_url"
-    t.string "open_issues_count"
+    t.integer "open_issues_count"
     t.datetime "github_created_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
