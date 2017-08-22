@@ -1,24 +1,6 @@
-# README
+Clone this repo and run bundle install to install gems
+Run 'rake db:migrate' to migrate database.
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Run 'rake import' to import org/repos/pulls via Github REST API.
 
-Things you may want to cover:
-
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+Run 'rake import_graphql' to import org/repos/pulls via Github GraphQL API.
