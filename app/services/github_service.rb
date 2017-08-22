@@ -1,17 +1,16 @@
 require 'pry'
+
 class GithubService
 	attr_accessor :org, :conn
 
-	# will use this url to migrate from REST to graphQL
-	# @@root_url_graphql = 'https://api.github.com/graphql'
-
 	def initialize(org_name)
-		self.org = Organization.find_or_create_by(name: org_name)
+		self.org = Organization.find_or_create_by(login: org_name)
 		self.conn = Faraday.new(:url => 'https://api.github.com', :headers => {'Accept' => 'application/vnd.github.v3+json'})
+		self.graphqlconn = Faraday.new(:url => '', :headers => {'Authorization' => "Bearer #{GITHUB_TOKEN}"})
 	end
 
 	def create_org
-		resp = conn.get URI.parse(URI.encode("orgs/#{org.name}"))
+		resp = conn.get URI.parse(URI.encode("orgs/#{org.login}"))
 		body = JSON.parse(resp.body)
 
 		org.login = body["login"]
@@ -21,6 +20,22 @@ class GithubService
 		org.public_repos = body["public_repos"]
 		org.html_url = body["html_url"]
 		org.github_created_at = body["created_at"]
+		org.save
+	end
+
+	def create_org_graphql
+		org_query = {
+			organization(login: org.login) {
+				url
+				description
+			}
+		}
+
+		resp = graphqlconn.get {:query => org_query}
+		body = JSON.parse(resp.body)
+
+		org.url = body.data.url
+		org.description = body.data.description
 		org.save
 	end
 

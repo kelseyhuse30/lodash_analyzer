@@ -5,7 +5,6 @@ class CreateOrganizations < ActiveRecord::Migration[5.1]
       t.string :url
     	t.string :repos_url
     	t.string :description
-    	t.string :name
     	t.integer :public_repos
     	t.string :html_url
     	t.datetime :github_created_at

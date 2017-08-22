@@ -1,7 +1,7 @@
 class CreateRepos < ActiveRecord::Migration[5.1]
   def change
     create_table :repos do |t|    	
-      t.integer :github_id
+      t.string :github_id
       t.integer :organization_id
     	t.string :name
     	t.string :html_url
